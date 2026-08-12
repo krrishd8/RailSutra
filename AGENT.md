@@ -1,10 +1,18 @@
 # Project Instructions
 
 ## Project
-[Your SIH project name]
+**"RailSutra"**
 
 ## Objective
-[What the system does]
+
+**Core Capabilities & Objectives:**
+
+1. **Festive Demand & Capacity Optimization:**
+Analyze historical passenger data, ticketing trends, and seasonal spikes during major Indian festivals (e.g., Durga Puja to West Bengal, Chhath Puja to Bihar). Predict precise demand patterns to recommend optimal special train frequencies, preventing underutilized/empty runs on low-demand routes while alleviating extreme congestion on high-demand corridors.
+2. **Track Bottleneck & Heatmap Analytics:**
+Generate real-time and predictive track heatmaps to identify spatial chokepoints—such as asymmetrical track allocations (e.g., two outbound tracks versus one inbound track handling surplus traffic). Calculate viable dispatch schedules, dynamic speed adjustments, and rerouting scenarios to minimize train halts, reduce station wait times, and optimize line capacity.
+3. **Predictive & Regional Maintenance Tracking:**
+Provide micro-climate-aware maintenance scheduling tailored to regional environmental stress (e.g., high humidity in coastal zones, extreme thermal expansion in northern plains). Maintain comprehensive digital asset histories—including train age, cumulative operational hours, complete overhaul records, and component-level service logs—to trigger proactive maintenance alerts and prevent dynamic en-route failures.
 
 ## Stack
 Frontend:
