@@ -1,0 +1,56 @@
+:root {
+  /* RailSutra Palette - Deep Navy Command Center (DESIGN.md) */
+  --bg-darker: #07111f;
+  --bg-main: #0b1626;
+  --bg-elevated: #0f1c2e;
+
+  --surface-primary: #111f32;
+  --surface-secondary: #14243a;
+  --surface-hover: #172a42;
+
+  --border-subtle: #1e2d42;
+  --border-default: #26384d;
+  --border-strong: #30445b;
+
+  /* Primary Accent - Railway Blue */
+  --color-primary: #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+  --color-primary-glow: rgba(59, 130, 246, 0.25);
+
+  /* Status & Severity Colors */
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+
+  --color-critical: #ef4444;
+  --color-critical-bg: rgba(239, 68, 68, 0.15);
+
+  --color-info: #38bdf8;
+  --color-info-bg: rgba(56, 189, 248, 0.12);
+
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown: 0 10px 25px rgba(0, 0, 0, 0.5);
+
+  /* Layout */
+  --header-height: 60px;
+  --sidebar-width: 240px;
+}

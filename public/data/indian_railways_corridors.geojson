@@ -1,0 +1,150 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [77.2195, 28.6424],
+          [80.3507, 26.4542],
+          [81.8315, 25.4452],
+          [83.1205, 25.2818],
+          [88.3426, 22.5840]
+        ]
+      },
+      "properties": {
+        "id": "sec_ndls_hwh",
+        "code": "COR_NDLS_HWH",
+        "name": "Delhi–Howrah Main Trunk Corridor",
+        "status": "NORMAL",
+        "saturationRatio": 0.68,
+        "trackCount": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [72.8193, 18.9696],
+          [72.6012, 23.0225],
+          [77.2195, 28.6424]
+        ]
+      },
+      "properties": {
+        "id": "sec_mmct_ndls",
+        "code": "COR_MMCT_NDLS",
+        "name": "Mumbai–Delhi Western Trunk Corridor",
+        "status": "NORMAL",
+        "saturationRatio": 0.54,
+        "trackCount": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [77.2195, 28.6424]
+      },
+      "properties": {
+        "id": "stn_ndls",
+        "code": "NDLS",
+        "name": "New Delhi",
+        "zone": "NR",
+        "tracks": 16,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [80.3507, 26.4542]
+      },
+      "properties": {
+        "id": "stn_cnb",
+        "code": "CNB",
+        "name": "Kanpur Central",
+        "zone": "NCR",
+        "tracks": 10,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [81.8315, 25.4452]
+      },
+      "properties": {
+        "id": "stn_pryj",
+        "code": "PRYJ",
+        "name": "Prayagraj Junction",
+        "zone": "NCR",
+        "tracks": 10,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [83.1205, 25.2818]
+      },
+      "properties": {
+        "id": "stn_ddu",
+        "code": "DDU",
+        "name": "Pt. Deen Dayal Upadhyaya Jn",
+        "zone": "ECR",
+        "tracks": 12,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [88.3426, 22.5840]
+      },
+      "properties": {
+        "id": "stn_hwh",
+        "code": "HWH",
+        "name": "Howrah Junction",
+        "zone": "ER",
+        "tracks": 23,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [72.8193, 18.9696]
+      },
+      "properties": {
+        "id": "stn_mmct",
+        "code": "MMCT",
+        "name": "Mumbai Central",
+        "zone": "WR",
+        "tracks": 9,
+        "isJunction": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [72.6012, 23.0225]
+      },
+      "properties": {
+        "id": "stn_adi",
+        "code": "ADI",
+        "name": "Ahmedabad Junction",
+        "zone": "WR",
+        "tracks": 12,
+        "isJunction": true
+      }
+    }
+  ]
+}

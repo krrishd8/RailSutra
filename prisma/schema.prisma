@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      String   // CONTROLLER, PLANNER, MAINTENANCE, EXECUTIVE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Station {
+  id             String   @id @default(uuid())
+  code           String   @unique // e.g., NDLS, HWH, CNB, PRYJ
+  name           String   // e.g., New Delhi, Howrah Junction
+  latitude       Float
+  longitude      Float
+  zone           String   // e.g., NR, ER, NCR, WR
+  capacityTracks Int      @default(6)
+  createdAt      DateTime @default(now())
+
+  // Relations
+  corridorsOrigin      Corridor[] @relation("OriginStation")
+  corridorsDestination Corridor[] @relation("DestinationStation")
+  sectionsStart        Section[]  @relation("StartStation")
+  sectionsEnd          Section[]  @relation("EndStation")
+}
+
+model Corridor {
+  id                   String   @id @default(uuid())
+  code                 String   @unique // e.g., COR_NDLS_HWH
+  name                 String   // e.g., Delhi-Howrah Main Trunk
+  originStationId      String
+  destinationStationId String
+  totalLengthKm        Float
+  maxCapacityTrains    Int      @default(120)
+  createdAt            DateTime @default(now())
+
+  originStation      Station   @relation("OriginStation", fields: [originStationId], references: [id])
+  destinationStation Station   @relation("DestinationStation", fields: [destinationStationId], references: [id])
+  sections           Section[]
+}
+
+model Section {
+  id               String   @id @default(uuid())
+  corridorId       String
+  startStationId   String
+  endStationId     String
+  name             String   // e.g., Kanpur-Prayagraj Section
+  trackCount       Int      @default(2)
+  designSpeedKmh   Int      @default(130)
+  maxDailyCapacity Int      @default(80)
+  createdAt        DateTime @default(now())
+
+  corridor     Corridor @relation(fields: [corridorId], references: [id])
+  startStation Station  @relation("StartStation", fields: [startStationId], references: [id])
+  endStation   Station  @relation("EndStation", fields: [endStationId], references: [id])
+}
+
+model Train {
+  id           String   @id @default(uuid())
+  number       String   @unique // e.g., 12301, 12260
+  name         String   // e.g., Howrah Rajdhani Express
+  type         String   // SUPERFAST, EXPRESS, PASSENGER, FREIGHT
+  totalCoaches Int      @default(22)
+  maxSpeedKmh  Int      @default(130)
+  createdAt    DateTime @default(now())
+}
