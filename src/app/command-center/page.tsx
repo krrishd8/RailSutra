@@ -5,6 +5,7 @@ import { MetricCard } from '@/shared/components/MetricCard';
 import { AlertBadge } from '@/shared/components/AlertBadge';
 import { ScenarioBar } from '@/shared/components/ScenarioBar';
 import { OperationalMap } from '@/modules/map/OperationalMap';
+import { AICopilotWidget } from '@/shared/components/AICopilotWidget';
 import { useSimulationPoller } from '@/modules/simulation/useSimulationStore';
 import { AlertItem } from '@/modules/alerts/alert.types';
 import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap, Play, Check } from 'lucide-react';
@@ -59,7 +60,7 @@ export default function CommandCenterPage() {
   const criticalAlertCount = alerts.filter((a) => a.severity === 'CRITICAL' && !a.isAcknowledged).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '100%', paddingBottom: '20px' }}>
       {/* Page Title & Operational Status Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
@@ -67,7 +68,7 @@ export default function CommandCenterPage() {
             Operational Command Center
           </h1>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Real-time railway network health, geospatial telemetry, and smart alert analytics.
+            Real-time railway network health, geospatial telemetry, and AI operations decision support.
           </p>
         </div>
 
@@ -162,7 +163,7 @@ export default function CommandCenterPage() {
       </div>
 
       {/* Main Grid: MapLibre Map (Left 70%) & Active Alerts / Details (Right 30%) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', flex: 1, minHeight: '480px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', minHeight: '460px' }}>
         {/* MapLibre Operational Map */}
         <OperationalMap
           onSelectFeature={handleSelectFeature}
@@ -251,7 +252,7 @@ export default function CommandCenterPage() {
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-evaluating</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '360px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '320px' }}>
               {alerts.length === 0 ? (
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
                   No active alerts. Network status nominal.
@@ -326,6 +327,9 @@ export default function CommandCenterPage() {
           </div>
         </div>
       </div>
+
+      {/* AI Operations Assistant Section */}
+      <AICopilotWidget />
     </div>
   );
 }
