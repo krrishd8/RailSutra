@@ -3,23 +3,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { AlertTriangle, MapPin, RefreshCw } from 'lucide-react';
+import { AlertTriangle, MapPin } from 'lucide-react';
+import { SectionRuntimeState, TrainRuntimeState } from '@/modules/simulation/simulation.types';
 
 interface OperationalMapProps {
   onSelectFeature?: (featureProps: Record<string, any>) => void;
+  simulationSections?: Record<string, SectionRuntimeState>;
+  simulationTrains?: Record<string, TrainRuntimeState>;
 }
 
-export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature }) => {
+export const OperationalMap: React.FC<OperationalMapProps> = ({
+  onSelectFeature,
+  simulationSections,
+  simulationTrains,
+}) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const geojsonDataRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  // Initialize MapLibre GL instance
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     try {
-      // Dark Matter style vector tiles (Free & Open Source)
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: {
@@ -54,20 +62,19 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
 
       map.on('load', async () => {
         try {
-          // Fetch GeoJSON corridors data
           const response = await fetch('/data/indian_railways_corridors.geojson');
           if (!response.ok) {
             throw new Error(`Failed to load GeoJSON data: ${response.statusText}`);
           }
           const geojsonData = await response.json();
+          geojsonDataRef.current = geojsonData;
 
-          // Add GeoJSON Source
           map.addSource('railway-network', {
             type: 'geojson',
             data: geojsonData,
           });
 
-          // Add Corridor Line Layer
+          // Corridor Lines Layer
           map.addLayer({
             id: 'corridor-lines',
             type: 'line',
@@ -91,7 +98,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
             },
           });
 
-          // Add Station Points Layer
+          // Station Points Layer
           map.addLayer({
             id: 'station-points',
             type: 'circle',
@@ -105,7 +112,7 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
             },
           });
 
-          // Click interactions
+          // Click interactions on stations
           map.on('click', 'station-points', (e) => {
             if (!e.features || e.features.length === 0) return;
             const props = e.features[0].properties;
@@ -117,11 +124,18 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
                 `<div style="font-family: sans-serif; font-size: 13px;">
                   <strong style="color: #60a5fa;">${props.name} (${props.code})</strong><br/>
                   <span style="color: #94a3b8;">Railway Zone: ${props.zone}</span><br/>
-                  <span style="color: #94a3b8;">Capacity Tracks: ${props.tracks}</span>
+                  <span style="color: #94a3b8;">Platform Tracks: ${props.tracks}</span>
                 </div>`
               )
               .addTo(map);
 
+            if (onSelectFeature) onSelectFeature(props);
+          });
+
+          // Click interactions on corridors
+          map.on('click', 'corridor-lines', (e) => {
+            if (!e.features || e.features.length === 0) return;
+            const props = e.features[0].properties;
             if (onSelectFeature) onSelectFeature(props);
           });
 
@@ -139,10 +153,6 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
         }
       });
 
-      map.on('error', (e) => {
-        console.warn('MapLibre GL map warning/error:', e);
-      });
-
       mapRef.current = map;
     } catch (err: any) {
       console.error('MapLibre GL init error:', err);
@@ -156,6 +166,43 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({ onSelectFeature 
       }
     };
   }, [onSelectFeature]);
+
+  // Synchronize live simulation section states onto GeoJSON map source
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || !simulationSections || !geojsonDataRef.current) return;
+
+    try {
+      const source = mapRef.current.getSource('railway-network') as maplibregl.GeoJSONSource | undefined;
+      if (!source) return;
+
+      const updatedFeatures = geojsonDataRef.current.features.map((feature: any) => {
+        if (feature.geometry.type === 'LineString') {
+          // If section/corridor matches live simulation state, update saturationRatio
+          const secId = feature.properties?.id;
+          if (secId && simulationSections[secId]) {
+            return {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                saturationRatio: simulationSections[secId].saturationRatio,
+                activeTrains: simulationSections[secId].activeTrainCount,
+              },
+            };
+          }
+        }
+        return feature;
+      });
+
+      const updatedGeoJSON = {
+        ...geojsonDataRef.current,
+        features: updatedFeatures,
+      };
+
+      source.setData(updatedGeoJSON);
+    } catch (err) {
+      console.warn('Could not update map GeoJSON source with simulation state:', err);
+    }
+  }, [mapLoaded, simulationSections]);
 
   return (
     <div

@@ -5,34 +5,34 @@ import { MetricCard } from '@/shared/components/MetricCard';
 import { AlertBadge } from '@/shared/components/AlertBadge';
 import { ScenarioBar } from '@/shared/components/ScenarioBar';
 import { OperationalMap } from '@/modules/map/OperationalMap';
-import { NetworkKpis } from '@/modules/command-center/commandCenter.types';
+import { useSimulationPoller } from '@/modules/simulation/useSimulationStore';
 import { AlertItem } from '@/modules/alerts/alert.types';
-import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap, Play } from 'lucide-react';
 
 export default function CommandCenterPage() {
-  const [kpis, setKpis] = useState<NetworkKpis | null>(null);
+  const { state: simState, isLoading: isSimLoading, triggerTick } = useSimulationPoller(2000);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [selectedFeature, setSelectedFeature] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
-    async function fetchDashboard() {
+    async function fetchAlerts() {
       try {
         const res = await fetch('/api/dashboard');
         if (res.ok) {
           const data = await res.json();
-          setKpis(data.kpis);
-          setAlerts(data.alerts);
+          setAlerts(data.alerts || []);
         }
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching dashboard alerts:', err);
       }
     }
 
-    fetchDashboard();
+    fetchAlerts();
   }, []);
+
+  const metrics = simState?.metrics;
+  const simulatedTime = simState?.simulatedTime || '08:30 IST';
+  const tickCount = simState?.tick ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
@@ -47,7 +47,27 @@ export default function CommandCenterPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => triggerTick()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--surface-secondary)',
+              color: 'var(--color-primary-light)',
+              border: '1px solid var(--border-default)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+            title="Advance Simulation Clock by 1 Tick"
+          >
+            <Play size={13} /> Step Tick ({simulatedTime})
+          </button>
+
           <span
             style={{
               padding: '4px 10px',
@@ -62,7 +82,7 @@ export default function CommandCenterPage() {
               gap: '6px',
             }}
           >
-            <CheckCircle size={14} /> Shared State Backbone Ready
+            <CheckCircle size={14} /> Shared State Live (Tick #{tickCount})
           </span>
         </div>
       </div>
@@ -70,51 +90,61 @@ export default function CommandCenterPage() {
       {/* Scenario Launcher Banner */}
       <ScenarioBar />
 
-      {/* KPI Cards Grid */}
+      {/* KPI Cards Grid - Bound to Live Simulation State */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <MetricCard
           title="Network Health Index"
-          value={kpis ? `${kpis.networkHealthIndex}/100` : '88/100'}
+          value={metrics ? `${metrics.networkHealthIndex}/100` : '88/100'}
           subtext="Optimal operational range (> 80)"
-          status="success"
+          status={
+            metrics && metrics.networkHealthIndex >= 80
+              ? 'success'
+              : metrics && metrics.networkHealthIndex >= 60
+              ? 'warning'
+              : 'critical'
+          }
           icon={Activity}
         />
         <MetricCard
           title="Active Trains"
-          value={kpis ? kpis.totalActiveTrains : 142}
-          subtext="6 Superfast, 2 Freight Rakes"
+          value={metrics ? metrics.totalActiveTrains : 6}
+          subtext={`${metrics?.delayedTrainCount ?? 1} delayed (>15m)`}
           status="info"
           icon={Train}
-          trend="+4 vs avg"
+          trend={metrics ? `${metrics.totalActiveTrains} active` : '+4 vs avg'}
         />
         <MetricCard
           title="On-Time Punctuality"
-          value={kpis ? `${kpis.onTimePercentage}%` : '91.4%'}
+          value={metrics ? `${metrics.onTimePercentage}%` : '83.3%'}
           subtext="Target threshold: 90.0%"
-          status="success"
+          status={metrics && metrics.onTimePercentage >= 90 ? 'success' : 'warning'}
           icon={Clock}
         />
         <MetricCard
-          title="Active Bottlenecks"
-          value={kpis ? kpis.activeBottlenecks : 2}
-          subtext="Kanpur-Prayagraj (V/C 0.88)"
-          status="warning"
+          title="Saturated Sections"
+          value={metrics ? metrics.saturatedSectionCount : 1}
+          subtext={metrics?.criticalBottleneckCount ? `${metrics.criticalBottleneckCount} critical bottlenecks` : 'Kanpur-Prayagraj (V/C 0.88)'}
+          status={metrics?.criticalBottleneckCount ? 'critical' : metrics?.saturatedSectionCount ? 'warning' : 'success'}
           icon={AlertTriangle}
-          trend="+1 critical"
+          trend={metrics?.criticalBottleneckCount ? `+${metrics.criticalBottleneckCount} critical` : undefined}
         />
         <MetricCard
-          title="Critical Alerts"
-          value={kpis ? kpis.criticalAlerts : 1}
-          subtext="Action required by controller"
-          status="critical"
+          title="Capacity Utilization"
+          value={metrics ? `${metrics.corridorCapacityUtilization}%` : '68.5%'}
+          subtext="Corridor-wide avg V/C ratio"
+          status="info"
           icon={ShieldAlert}
         />
       </div>
 
       {/* Main Grid: MapLibre Map (Left 70%) & Active Alerts / Details (Right 30%) */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', flex: 1, minHeight: '480px' }}>
-        {/* MapLibre Operational Map */}
-        <OperationalMap onSelectFeature={(props) => setSelectedFeature(props)} />
+        {/* MapLibre Operational Map consuming live state */}
+        <OperationalMap
+          onSelectFeature={(props) => setSelectedFeature(props)}
+          simulationSections={simState?.sections}
+          simulationTrains={simState?.trains}
+        />
 
         {/* Right Panel: Active Alerts & Feature Inspection */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -135,10 +165,14 @@ export default function CommandCenterPage() {
                 Selected Map Node
               </div>
               <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                {selectedFeature.name} ({selectedFeature.code})
+                {selectedFeature.name} ({selectedFeature.code || selectedFeature.id})
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Zone: <strong>{selectedFeature.zone}</strong> | Platform Tracks: <strong>{selectedFeature.tracks}</strong>
+                {selectedFeature.zone ? (
+                  <>Zone: <strong>{selectedFeature.zone}</strong> | Platform Tracks: <strong>{selectedFeature.tracks}</strong></>
+                ) : (
+                  <>Saturation Ratio: <strong>{selectedFeature.saturationRatio ?? 'N/A'}</strong></>
+                )}
               </div>
               <button
                 onClick={() => setSelectedFeature(null)}
@@ -148,6 +182,7 @@ export default function CommandCenterPage() {
                   fontSize: '11px',
                   color: 'var(--text-muted)',
                   textDecoration: 'underline',
+                  cursor: 'pointer',
                 }}
               >
                 Clear Selection
@@ -157,7 +192,7 @@ export default function CommandCenterPage() {
             <div
               style={{
                 backgroundColor: 'var(--surface-primary)',
-                border: '1px border-dashed var(--border-default)',
+                border: '1px dashed var(--border-default)',
                 borderRadius: 'var(--radius-lg)',
                 padding: '14px 16px',
                 fontSize: '12px',
@@ -168,7 +203,7 @@ export default function CommandCenterPage() {
               }}
             >
               <Zap size={16} style={{ color: 'var(--color-primary)' }} />
-              Click any station node on the map to inspect telemetry details.
+              Click any station node or corridor line to inspect live telemetry.
             </div>
           )}
 
