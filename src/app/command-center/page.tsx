@@ -49,6 +49,10 @@ export default function CommandCenterPage() {
     }
   };
 
+  const handleSelectFeature = useCallback((props: Record<string, any>) => {
+    setSelectedFeature(props);
+  }, []);
+
   const metrics = simState?.metrics;
   const simulatedTime = simState?.simulatedTime || '08:30 IST';
   const tickCount = simState?.tick ?? 0;
@@ -161,7 +165,7 @@ export default function CommandCenterPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', flex: 1, minHeight: '480px' }}>
         {/* MapLibre Operational Map */}
         <OperationalMap
-          onSelectFeature={(props) => setSelectedFeature(props)}
+          onSelectFeature={handleSelectFeature}
           simulationSections={simState?.sections}
           simulationTrains={simState?.trains}
         />

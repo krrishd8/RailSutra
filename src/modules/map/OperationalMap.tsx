@@ -20,12 +20,20 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const geojsonDataRef = useRef<any>(null);
+  const onSelectFeatureRef = useRef(onSelectFeature);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Initialize MapLibre GL instance
+  // Keep callback reference updated without triggering map re-initialization
+  useEffect(() => {
+    onSelectFeatureRef.current = onSelectFeature;
+  }, [onSelectFeature]);
+
+  // Initialize MapLibre GL instance EXACTLY ONCE on mount
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+
+    let isMounted = true;
 
     try {
       const map = new maplibregl.Map({
@@ -61,56 +69,66 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
       map.on('load', async () => {
+        if (!isMounted) return;
+
         try {
           const response = await fetch('/data/indian_railways_corridors.geojson');
           if (!response.ok) {
             throw new Error(`Failed to load GeoJSON data: ${response.statusText}`);
           }
           const geojsonData = await response.json();
+          if (!isMounted) return;
+
           geojsonDataRef.current = geojsonData;
 
-          map.addSource('railway-network', {
-            type: 'geojson',
-            data: geojsonData,
-          });
+          if (!map.getSource('railway-network')) {
+            map.addSource('railway-network', {
+              type: 'geojson',
+              data: geojsonData,
+            });
+          }
 
           // Corridor Lines Layer
-          map.addLayer({
-            id: 'corridor-lines',
-            type: 'line',
-            source: 'railway-network',
-            filter: ['==', '$type', 'LineString'],
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round',
-            },
-            paint: {
-              'line-color': [
-                'case',
-                ['>=', ['get', 'saturationRatio'], 0.9],
-                '#ef4444', // Red (Critical)
-                ['>=', ['get', 'saturationRatio'], 0.7],
-                '#f59e0b', // Amber (Warning)
-                '#3b82f6', // Blue (Normal)
-              ],
-              'line-width': 4,
-              'line-opacity': 0.85,
-            },
-          });
+          if (!map.getLayer('corridor-lines')) {
+            map.addLayer({
+              id: 'corridor-lines',
+              type: 'line',
+              source: 'railway-network',
+              filter: ['==', '$type', 'LineString'],
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': [
+                  'case',
+                  ['>=', ['get', 'saturationRatio'], 0.9],
+                  '#ef4444', // Red (Critical)
+                  ['>=', ['get', 'saturationRatio'], 0.7],
+                  '#f59e0b', // Amber (Warning)
+                  '#3b82f6', // Blue (Normal)
+                ],
+                'line-width': 4,
+                'line-opacity': 0.85,
+              },
+            });
+          }
 
           // Station Points Layer
-          map.addLayer({
-            id: 'station-points',
-            type: 'circle',
-            source: 'railway-network',
-            filter: ['==', '$type', 'Point'],
-            paint: {
-              'circle-radius': 7,
-              'circle-color': '#10b981',
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#0b1626',
-            },
-          });
+          if (!map.getLayer('station-points')) {
+            map.addLayer({
+              id: 'station-points',
+              type: 'circle',
+              source: 'railway-network',
+              filter: ['==', '$type', 'Point'],
+              paint: {
+                'circle-radius': 7,
+                'circle-color': '#10b981',
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#0b1626',
+              },
+            });
+          }
 
           // Click interactions on stations
           map.on('click', 'station-points', (e) => {
@@ -129,14 +147,14 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
               )
               .addTo(map);
 
-            if (onSelectFeature) onSelectFeature(props);
+            onSelectFeatureRef.current?.(props);
           });
 
           // Click interactions on corridors
           map.on('click', 'corridor-lines', (e) => {
             if (!e.features || e.features.length === 0) return;
             const props = e.features[0].properties;
-            if (onSelectFeature) onSelectFeature(props);
+            onSelectFeatureRef.current?.(props);
           });
 
           map.on('mouseenter', 'station-points', () => {
@@ -146,11 +164,17 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
             map.getCanvas().style.cursor = '';
           });
 
-          setMapLoaded(true);
+          if (isMounted) {
+            setMapLoaded(true);
+          }
         } catch (err: any) {
           console.error('Error loading GeoJSON corridors:', err);
-          setMapError('Failed to load railway GeoJSON layer.');
+          if (isMounted) setMapError('Failed to load railway GeoJSON layer.');
         }
+      });
+
+      map.on('error', (e) => {
+        console.warn('MapLibre GL map warning/error:', e);
       });
 
       mapRef.current = map;
@@ -160,24 +184,27 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
     }
 
     return () => {
+      isMounted = false;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [onSelectFeature]);
+  }, []); // Strictly empty dependency array: Map initializes once per mount
 
-  // Synchronize live simulation section states onto GeoJSON map source
+  // Synchronize live simulation section states onto GeoJSON map source without recreating map
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || !simulationSections || !geojsonDataRef.current) return;
 
     try {
-      const source = mapRef.current.getSource('railway-network') as maplibregl.GeoJSONSource | undefined;
+      const map = mapRef.current;
+      if (!map.loaded() || !map.getSource('railway-network')) return;
+
+      const source = map.getSource('railway-network') as maplibregl.GeoJSONSource | undefined;
       if (!source) return;
 
       const updatedFeatures = geojsonDataRef.current.features.map((feature: any) => {
         if (feature.geometry.type === 'LineString') {
-          // If section/corridor matches live simulation state, update saturationRatio
           const secId = feature.properties?.id;
           if (secId && simulationSections[secId]) {
             return {
