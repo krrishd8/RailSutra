@@ -11,7 +11,7 @@ import { AlertItem } from '@/modules/alerts/alert.types';
 import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap, Play, Check } from 'lucide-react';
 
 export default function CommandCenterPage() {
-  const { state: simState, triggerTick } = useSimulationPoller(2000);
+  const { state: simState, triggerTick, applyScenario } = useSimulationPoller(2000);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<Record<string, any> | null>(null);
 
@@ -53,6 +53,11 @@ export default function CommandCenterPage() {
   const handleSelectFeature = useCallback((props: Record<string, any>) => {
     setSelectedFeature(props);
   }, []);
+
+  const handleSelectScenario = async (scenarioId: string) => {
+    await applyScenario(scenarioId);
+    fetchAlerts();
+  };
 
   const metrics = simState?.metrics;
   const simulatedTime = simState?.simulatedTime || '08:30 IST';
@@ -113,7 +118,10 @@ export default function CommandCenterPage() {
       </div>
 
       {/* Scenario Launcher Banner */}
-      <ScenarioBar />
+      <ScenarioBar
+        currentScenario={simState?.activeScenarioId || 'NORMAL_OPERATIONS'}
+        onSelectScenario={handleSelectScenario}
+      />
 
       {/* KPI Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>

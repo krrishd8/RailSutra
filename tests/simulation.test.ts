@@ -90,4 +90,21 @@ describe('SimulationEngine & Shared Operational State', () => {
     expect(resetState.tick).toBe(0);
     expect(resetState.simulatedTime).toBe('08:30 IST');
   });
+
+  it('should apply FESTIVAL_SURGE scenario correctly', () => {
+    const surgeState = engine.applyScenario('FESTIVAL_SURGE');
+    expect(surgeState.activeScenarioId).toBe('FESTIVAL_SURGE');
+    expect(surgeState.sections.sec_ndls_cnb.saturationRatio).toBeGreaterThanOrEqual(0.9);
+    expect(surgeState.sections.sec_cnb_pryj.saturationRatio).toBeGreaterThanOrEqual(0.9);
+    expect(surgeState.metrics.criticalBottleneckCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should apply TRACK_FAILURE_KANPUR scenario correctly', () => {
+    const failureState = engine.applyScenario('TRACK_FAILURE_KANPUR');
+    expect(failureState.activeScenarioId).toBe('TRACK_FAILURE_KANPUR');
+    expect(failureState.sections.sec_cnb_pryj.isDisrupted).toBe(true);
+    expect(failureState.sections.sec_cnb_pryj.saturationRatio).toBeGreaterThanOrEqual(0.95);
+    expect(failureState.trains.trn_12801.status).toBe('DELAYED');
+    expect(failureState.metrics.networkHealthIndex).toBeLessThan(75);
+  });
 });

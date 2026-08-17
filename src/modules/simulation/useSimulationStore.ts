@@ -67,11 +67,29 @@ export function useSimulationPoller(pollIntervalMs: number = 2000) {
     }
   };
 
+  const applyScenario = async (scenarioId: string, overrides?: Partial<OperationalState>) => {
+    try {
+      const res = await fetch('/api/simulation/scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId, overrides }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setState(json.data);
+        mutate(json.data, false);
+      }
+    } catch (err) {
+      console.error('Error applying scenario:', err);
+    }
+  };
+
   return {
     state: data || storedState,
     error,
     isLoading: isLoading && !storedState,
     triggerTick,
+    applyScenario,
     refresh: mutate,
   };
 }

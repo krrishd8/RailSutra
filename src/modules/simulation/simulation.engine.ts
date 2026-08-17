@@ -349,6 +349,43 @@ export class SimulationEngine {
       return this.reset();
     }
 
+    if (scenarioId === 'FESTIVAL_SURGE') {
+      const base = createInitialState();
+      base.activeScenarioId = 'FESTIVAL_SURGE';
+      base.sections.sec_ndls_cnb.saturationRatio = 0.92;
+      base.sections.sec_ndls_cnb.saturationStatus = 'CRITICAL';
+      base.sections.sec_cnb_pryj.saturationRatio = 0.95;
+      base.sections.sec_cnb_pryj.saturationStatus = 'CRITICAL';
+      base.metrics.saturatedSectionCount = 2;
+      base.metrics.criticalBottleneckCount = 2;
+      base.metrics.corridorCapacityUtilization = 78.5;
+      base.metrics.networkHealthIndex = 72;
+      this.state = overrides ? { ...base, ...overrides } : base;
+      this.state.metadata.lastUpdated = Date.now();
+      return this.getState();
+    }
+
+    if (scenarioId === 'TRACK_FAILURE_KANPUR') {
+      const base = createInitialState();
+      base.activeScenarioId = 'TRACK_FAILURE_KANPUR';
+      base.sections.sec_cnb_pryj.isDisrupted = true;
+      base.sections.sec_cnb_pryj.disruptionReason = 'Track Circuit & Point Failure at Kanpur Yard';
+      base.sections.sec_cnb_pryj.saturationRatio = 0.98;
+      base.sections.sec_cnb_pryj.saturationStatus = 'CRITICAL';
+      base.trains.trn_12801.delayMinutes = 45;
+      base.trains.trn_12801.status = 'DELAYED';
+      base.trains.trn_freight_4021.delayMinutes = 60;
+      base.trains.trn_freight_4021.status = 'DELAYED';
+      base.metrics.delayedTrainCount = 2;
+      base.metrics.onTimePercentage = 66.7;
+      base.metrics.saturatedSectionCount = 1;
+      base.metrics.criticalBottleneckCount = 1;
+      base.metrics.networkHealthIndex = 58;
+      this.state = overrides ? { ...base, ...overrides } : base;
+      this.state.metadata.lastUpdated = Date.now();
+      return this.getState();
+    }
+
     this.state.activeScenarioId = scenarioId;
     if (overrides) {
       this.state = {

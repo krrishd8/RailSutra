@@ -206,6 +206,9 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
       const updatedFeatures = geojsonDataRef.current.features.map((feature: any) => {
         if (feature.geometry.type === 'LineString') {
           const secId = feature.properties?.id;
+          const code = feature.properties?.code?.toLowerCase();
+
+          // 1. Direct section ID match
           if (secId && simulationSections[secId]) {
             return {
               ...feature,
@@ -213,8 +216,40 @@ export const OperationalMap: React.FC<OperationalMapProps> = ({
                 ...feature.properties,
                 saturationRatio: simulationSections[secId].saturationRatio,
                 activeTrains: simulationSections[secId].activeTrainCount,
+                status: simulationSections[secId].saturationStatus,
               },
             };
+          }
+
+          // 2. Corridor mapping (e.g. sec_ndls_hwh / COR_NDLS_HWH -> cor_ndls_hwh)
+          const targetCorridorId =
+            secId === 'sec_ndls_hwh' || code === 'cor_ndls_hwh'
+              ? 'cor_ndls_hwh'
+              : secId === 'sec_mmct_ndls' || code === 'cor_mmct_ndls'
+              ? 'cor_mmct_ndls'
+              : null;
+
+          if (targetCorridorId) {
+            const constituentSections = Object.values(simulationSections).filter(
+              (s) => s.corridorId === targetCorridorId
+            );
+            if (constituentSections.length > 0) {
+              const maxSaturation = Math.max(...constituentSections.map((s) => s.saturationRatio));
+              const totalActiveTrains = constituentSections.reduce((acc, s) => acc + s.activeTrainCount, 0);
+              const hasCritical = constituentSections.some((s) => s.saturationStatus === 'CRITICAL' || s.isDisrupted);
+              const hasWarning = constituentSections.some((s) => s.saturationStatus === 'WARNING');
+              const corridorStatus = hasCritical ? 'CRITICAL' : hasWarning ? 'WARNING' : 'NORMAL';
+
+              return {
+                ...feature,
+                properties: {
+                  ...feature.properties,
+                  saturationRatio: maxSaturation,
+                  activeTrains: totalActiveTrains,
+                  status: corridorStatus,
+                },
+              };
+            }
           }
         }
         return feature;
