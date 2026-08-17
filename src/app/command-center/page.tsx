@@ -1,38 +1,58 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MetricCard } from '@/shared/components/MetricCard';
 import { AlertBadge } from '@/shared/components/AlertBadge';
 import { ScenarioBar } from '@/shared/components/ScenarioBar';
 import { OperationalMap } from '@/modules/map/OperationalMap';
 import { useSimulationPoller } from '@/modules/simulation/useSimulationStore';
 import { AlertItem } from '@/modules/alerts/alert.types';
-import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap, Play } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle, Clock, ShieldAlert, Train, Zap, Play, Check } from 'lucide-react';
 
 export default function CommandCenterPage() {
-  const { state: simState, isLoading: isSimLoading, triggerTick } = useSimulationPoller(2000);
+  const { state: simState, triggerTick } = useSimulationPoller(2000);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<Record<string, any> | null>(null);
 
-  useEffect(() => {
-    async function fetchAlerts() {
-      try {
-        const res = await fetch('/api/dashboard');
-        if (res.ok) {
-          const data = await res.json();
-          setAlerts(data.alerts || []);
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard alerts:', err);
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/alerts');
+      if (res.ok) {
+        const data = await res.json();
+        setAlerts(data.data?.alerts || []);
       }
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
     }
-
-    fetchAlerts();
   }, []);
+
+  useEffect(() => {
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 2000);
+    return () => clearInterval(interval);
+  }, [fetchAlerts, simState?.tick]);
+
+  const handleAcknowledge = async (alertId: string) => {
+    try {
+      const res = await fetch('/api/alerts/ack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId }),
+      });
+      if (res.ok) {
+        setAlerts((prev) =>
+          prev.map((a) => (a.id === alertId ? { ...a, isAcknowledged: true } : a))
+        );
+      }
+    } catch (err) {
+      console.error('Error acknowledging alert:', err);
+    }
+  };
 
   const metrics = simState?.metrics;
   const simulatedTime = simState?.simulatedTime || '08:30 IST';
   const tickCount = simState?.tick ?? 0;
+  const criticalAlertCount = alerts.filter((a) => a.severity === 'CRITICAL' && !a.isAcknowledged).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
@@ -43,7 +63,7 @@ export default function CommandCenterPage() {
             Operational Command Center
           </h1>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Real-time railway network health, geospatial telemetry, and bottleneck analytics summary.
+            Real-time railway network health, geospatial telemetry, and smart alert analytics.
           </p>
         </div>
 
@@ -90,7 +110,7 @@ export default function CommandCenterPage() {
       {/* Scenario Launcher Banner */}
       <ScenarioBar />
 
-      {/* KPI Cards Grid - Bound to Live Simulation State */}
+      {/* KPI Cards Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <MetricCard
           title="Network Health Index"
@@ -129,17 +149,17 @@ export default function CommandCenterPage() {
           trend={metrics?.criticalBottleneckCount ? `+${metrics.criticalBottleneckCount} critical` : undefined}
         />
         <MetricCard
-          title="Capacity Utilization"
-          value={metrics ? `${metrics.corridorCapacityUtilization}%` : '68.5%'}
-          subtext="Corridor-wide avg V/C ratio"
-          status="info"
+          title="Critical Alerts"
+          value={criticalAlertCount}
+          subtext={criticalAlertCount > 0 ? 'Requires controller action' : 'No unacknowledged criticals'}
+          status={criticalAlertCount > 0 ? 'critical' : 'success'}
           icon={ShieldAlert}
         />
       </div>
 
       {/* Main Grid: MapLibre Map (Left 70%) & Active Alerts / Details (Right 30%) */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', flex: 1, minHeight: '480px' }}>
-        {/* MapLibre Operational Map consuming live state */}
+        {/* MapLibre Operational Map */}
         <OperationalMap
           onSelectFeature={(props) => setSelectedFeature(props)}
           simulationSections={simState?.sections}
@@ -222,43 +242,82 @@ export default function CommandCenterPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                Active Network Alerts ({alerts.length})
+                Smart Network Alerts ({alerts.length})
               </h2>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-updating</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Auto-evaluating</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', maxHeight: '360px' }}>
-              {alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  style={{
-                    backgroundColor: 'var(--surface-secondary)',
-                    borderLeft: `4px solid ${
-                      alert.severity === 'CRITICAL'
-                        ? 'var(--color-critical)'
-                        : alert.severity === 'WARNING'
-                        ? 'var(--color-warning)'
-                        : 'var(--color-info)'
-                    }`,
-                    borderRadius: 'var(--radius-md)',
-                    padding: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <AlertBadge severity={alert.severity} label={alert.category} />
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{alert.timestamp}</span>
-                  </div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {alert.title}
-                  </div>
-                  <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    {alert.message}
-                  </p>
+              {alerts.length === 0 ? (
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+                  No active alerts. Network status nominal.
                 </div>
-              ))}
+              ) : (
+                alerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    style={{
+                      backgroundColor: 'var(--surface-secondary)',
+                      borderLeft: `4px solid ${
+                        alert.severity === 'CRITICAL'
+                          ? 'var(--color-critical)'
+                          : alert.severity === 'WARNING'
+                          ? 'var(--color-warning)'
+                          : 'var(--color-info)'
+                      }`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      opacity: alert.isAcknowledged ? 0.6 : 1,
+                      transition: 'opacity 0.2s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <AlertBadge severity={alert.severity} label={alert.category} />
+                        {alert.isAcknowledged && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            (ACK)
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{alert.timestamp}</span>
+                    </div>
+
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {alert.title}
+                    </div>
+
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      {alert.message}
+                    </p>
+
+                    {!alert.isAcknowledged && (
+                      <button
+                        onClick={() => handleAcknowledge(alert.id)}
+                        style={{
+                          alignSelf: 'flex-end',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--surface-hover)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Check size={11} /> Acknowledge
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
